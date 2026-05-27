@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Administración de Usuarios{% endblock %}
+{% block content %}
+<div class="card card-dashboard border-0 shadow-sm overflow-hidden">
+    <div class="card-header bg-white border-0 p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h5 class="mb-1 fw-bold outfit">Usuarios del Sistema</h5>
+                <p class="text-muted small mb-0">Gestiona los accesos y permisos de tu equipo</p>
+            </div>
+            <button type="button" class="btn btn-primary btn-lg shadow-sm px-4" data-bs-toggle="modal" data-bs-target="#nuevoUsuarioModal">
+                <i class="bi bi-person-plus-fill me-2"></i> Nuevo Usuario
+            </button>
+        </div>
+    </div>
+    
+    {% if modal_success %}
+    <div class="mx-4 mt-2">
+        <div class="alert alert-success border-0 rounded-3 py-2 d-flex align-items-center gap-2" style="background: rgba(16, 185, 129, 0.1); color: #166534;">
+            <i class="bi bi-check-circle-fill"></i>
+            <small>{{ modal_success }}</small>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Usuario</th>
+                        <th>Rol / Permisos</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in usuarios %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-person-circle"></i>
+                                </div>
+                                <span class="fw-bold text-dark">{{ u.username }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if u.rol == "admin" %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">
+                                <i class="bi bi-shield-check me-1"></i> Administrador
+                            </span>
+                            {% else %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
+                                <i class="bi bi-person me-1"></i> Vendedor
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <div class="btn-group gap-1">
+                                <button class="btn btn-light btn-sm rounded-circle p-2" title="Editar Rol"
+                                        data-bs-toggle="modal" data-bs-target="#editarUsuarioModal"
+                                        data-user-id="{{ u.id }}"
+                                        data-user-username="{{ u.username }}"
+                                        data-user-rol="{{ u.rol }}">
+                                    <i class="bi bi-pencil-fill text-primary"></i>
+                                </button>
+                                <button class="btn btn-light btn-sm rounded-circle p-2" title="Cambiar Clave"
+                                        data-bs-toggle="modal" data-bs-target="#passwordUsuarioModal"
+                                        data-user-id="{{ u.id }}"
+                                        data-user-username="{{ u.username }}">
+                                    <i class="bi bi-key-fill text-warning"></i>
+                                </button>
+                                {% if u.username != admin_username %}
+                                <button class="btn btn-light btn-sm rounded-circle p-2" title="Eliminar"
+                                        data-bs-toggle="modal" data-bs-target="#eliminarUsuarioModal"
+                                        data-user-id="{{ u.id }}"
+                                        data-user-username="{{ u.username }}">
+                                    <i class="bi bi-trash-fill text-danger"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modals with premium styling -->
+<div class="modal fade" id="nuevoUsuarioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.5rem;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold outfit fs-3">Crear Usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="POST" action="/usuarios" class="row g-4">
+                    <div class="col-12">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Nombre de Usuario</label>
+                        <input type="text" name="username" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Contraseña</label>
+                        <input type="password" name="password" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Rol del Usuario</label>
+                        <select name="rol_usuario" class="form-select border-0 bg-light py-3" style="border-radius: 0.75rem;">
+                            <option value="vendedor">Vendedor (Solo ventas)</option>
+                            <option value="admin">Administrador (Acceso total)</option>
+                        </select>
+                    </div>
+                    <div class="col-12 text-end mt-4">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill shadow">Crear Usuario</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Other modals simplified for brevity but maintaining logic -->
+<div class="modal fade" id="editarUsuarioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.25rem;">
+            <div class="modal-body text-center">
+                <h5 class="fw-bold mb-4" id="editarUsuarioNombre"></h5>
+                <form method="POST" id="editarUsuarioForm">
+                    <select name="rol_usuario" class="form-select border-0 bg-light py-3 mb-4" style="border-radius: 0.75rem;">
+                        <option value="vendedor">Vendedor</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-2">Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="passwordUsuarioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.25rem;">
+            <div class="modal-body">
+                <h5 class="fw-bold mb-4 text-center">Nueva Clave</h5>
+                <form method="POST" id="passwordUsuarioForm">
+                    <input type="password" name="password" class="form-control border-0 bg-light py-3 mb-4" style="border-radius: 0.75rem;" placeholder="Mínimo 6 caracteres" required>
+                    <button type="submit" class="btn btn-warning w-100 rounded-pill py-2 fw-bold text-white">Actualizar Clave</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="eliminarUsuarioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.25rem;">
+            <div class="modal-body text-center">
+                <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="bi bi-trash fs-2"></i>
+                </div>
+                <h5 class="fw-bold mb-3">¿Eliminar Usuario?</h5>
+                <p class="text-muted small mb-4" id="eliminarUsuarioTexto"></p>
+                <form method="POST" id="eliminarUsuarioForm">
+                    <button type="submit" class="btn btn-danger w-100 rounded-pill mb-2">Eliminar Definitivamente</button>
+                    <button type="button" class="btn btn-light w-100 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('[data-bs-target="#editarUsuarioModal"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('editarUsuarioForm').action = `/usuarios/${this.dataset.userId}/editar`;
+        document.getElementById('editarUsuarioNombre').textContent = 'Editar Rol: ' + this.dataset.userUsername;
+        document.querySelector('#editarUsuarioModal select[name="rol_usuario"]').value = this.dataset.userRol;
+    });
+});
+document.querySelectorAll('[data-bs-target="#passwordUsuarioModal"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('passwordUsuarioForm').action = `/usuarios/${this.dataset.userId}/password`;
+    });
+});
+document.querySelectorAll('[data-bs-target="#eliminarUsuarioModal"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('eliminarUsuarioForm').action = `/usuarios/${this.dataset.userId}/eliminar`;
+        document.getElementById('eliminarUsuarioTexto').textContent = `¿Estás seguro de eliminar a ${this.dataset.userUsername}?`;
+    });
+});
+</script>
+{% endblock %}

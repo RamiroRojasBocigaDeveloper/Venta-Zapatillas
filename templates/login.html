@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Iniciar Sesión{% endblock %}
+{% block login_content %}
+<div class="card card-dashboard glass" style="max-width: 450px; width: 100%; border-radius: 1.5rem;">
+    <div class="card-body p-5">
+        <div class="text-center mb-5">
+            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                <i class="bi bi-box-arrow-in-right text-primary" style="font-size: 2.5rem;"></i>
+            </div>
+            <h3 class="fw-bold mb-1">Bienvenido</h3>
+            <p class="text-muted">Ingresa tus credenciales para continuar</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger border-0 rounded-3 d-flex align-items-center gap-2" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <small>{{ error }}</small>
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="mb-4">
+                <label class="form-label text-muted small fw-semibold text-uppercase">Usuario</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-light border-0"><i class="bi bi-person text-secondary"></i></span>
+                    <input type="text" name="username" class="form-control bg-light border-0" placeholder="tu.usuario" required autofocus>
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <label class="form-label text-muted small fw-semibold text-uppercase">Contraseña</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-light border-0"><i class="bi bi-lock text-secondary"></i></span>
+                    <input type="password" name="password" class="form-control bg-light border-0" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100 py-3 shadow-lg">
+                Entrar al Sistema
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .input-group-text {
+        border-radius: 0.75rem 0 0 0.75rem;
+    }
+    .form-control {
+        border-radius: 0 0.75rem 0.75rem 0;
+        font-size: 1rem;
+    }
+    .form-control:focus {
+        background: #fff !important;
+        box-shadow: none;
+        border: 1px solid var(--primary);
+    }
+</style>
+{% endblock %}

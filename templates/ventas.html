@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Ventas{% endblock %}
+{% block content %}
+{% if error_venta %}
+<div class="alert alert-danger border-0 shadow-sm mb-4 d-flex align-items-center gap-3 py-3" style="border-radius: 1rem; background: rgba(239, 68, 68, 0.05); color: var(--danger);">
+    <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+    <div class="flex-grow-1">
+        <h6 class="mb-0 fw-bold">Error en la venta</h6>
+        <small>{{ error_venta }}</small>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="card card-dashboard border-0 shadow-sm overflow-hidden">
+    <div class="card-header bg-white border-0 p-4">
+        <div class="row g-3 align-items-center">
+            <div class="col-12 col-md-6">
+                <form method="GET" class="position-relative">
+                    <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+                    <input type="text" name="q" class="form-control form-control-lg border-0 bg-light ps-5" placeholder="Buscar por cliente o vendedor..." value="{{ q }}">
+                    {% if q %}
+                    <a href="/ventas" class="position-absolute top-50 end-0 translate-middle-y me-2 btn btn-link text-muted p-0">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="col-12 col-md-6 text-md-end">
+                <button type="button" class="btn btn-primary btn-lg shadow-sm px-4" data-bs-toggle="modal" data-bs-target="#nuevaVentaModal">
+                    <i class="bi bi-plus-circle-fill me-2"></i> Nueva Venta
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th>Total</th>
+                        <th>Pagado</th>
+                        <th>Estado Pago</th>
+                        <th>Entrega</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in ventas %}
+                    <tr>
+                        <td class="ps-4 text-muted fw-bold">#{{ v.id }}</td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ v.cliente.nombre }}</div>
+                            <small class="text-muted"><i class="bi bi-person small"></i> {{ v.vendedor }}</small>
+                        </td>
+                        <td class="text-secondary small">{{ v.fecha.strftime('%d/%m/%Y') }}</td>
+                        <td class="fw-bold text-dark">{{ v.total|cop }}</td>
+                        <td class="text-success small fw-medium">{{ v.total_pagado|cop }}</td>
+                        <td>
+                            {% if v.esta_pagada %}
+                            <span class="badge bg-success bg-opacity-10 text-success">
+                                <i class="bi bi-check-circle-fill me-1"></i> Pagada
+                            </span>
+                            {% else %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning">
+                                <i class="bi bi-clock-fill me-1"></i> Pendiente
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if v.productos_pendientes == 0 %}
+                            <span class="badge bg-success bg-opacity-10 text-success">
+                                <i class="bi bi-truck-flatbed me-1"></i> Entregado
+                            </span>
+                            {% else %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary">
+                                <i class="bi bi-box-seam-fill me-1"></i> {{ v.productos_pendientes }} Pendiente
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="/ventas/{{ v.id }}" class="btn btn-light btn-sm rounded-pill px-3 fw-bold text-primary">
+                                Ver Detalle
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
+                            No se encontraron ventas registradas
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Venta (Keep user logic but improve appearance) -->
+<div class="modal fade" id="nuevaVentaModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.5rem;">
+            <div class="modal-header border-0 p-4 pb-0">
+                <h5 class="modal-title fw-bold outfit fs-3">Registrar Nueva Venta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="POST" action="/ventas" id="nuevaVentaForm" class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-uppercase text-secondary">Cliente</label>
+                        <select name="cliente_id" class="form-select border-0 bg-light py-3" style="border-radius: 0.75rem;" required>
+                            <option value="">Seleccione un cliente...</option>
+                            {% for c in clientes %}
+                            <option value="{{ c.id }}">{{ c.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-uppercase text-secondary">Fecha</label>
+                        <input type="date" name="fecha" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;" value="{{ hoy }}" required>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <label class="form-label fw-bold small text-uppercase text-secondary mb-0">Productos</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="agregarFila()">
+                                <i class="bi bi-plus-lg"></i> Agregar ítem
+                            </button>
+                        </div>
+                        <div class="table-responsive bg-light p-3" style="border-radius: 1rem;">
+                            <table class="table table-borderless align-middle mb-0" id="productosTable">
+                                <thead>
+                                    <tr class="small text-muted text-uppercase">
+                                        <th>Producto</th>
+                                        <th style="width: 120px;">Cantidad</th>
+                                        <th style="width: 200px;">Precio Unit.</th>
+                                        <th style="width: 150px;">Subtotal</th>
+                                        <th style="width: 100px; text-align: center;">Entregado</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr id="fila0">
+                                        <td>
+                                            <select name="producto_id_0" class="form-select border-0 producto-select" onchange="actualizarPrecio(0)">
+                                                <option value="">Elija...</option>
+                                                {% for p in productos %}
+                                                <option value="{{ p.id }}" data-precio="{{ p.precio }}" data-stock="{{ p.stock }}">{{ p.nombre }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td><input type="number" name="cantidad_0" class="form-control border-0 cantidad" value="1" min="1" oninput="calcularSubtotal(0)"></td>
+                                        <td><input type="number" name="precio_unitario_0" class="form-control border-0 precio-unitario" oninput="calcularSubtotal(0)"></td>
+                                        <td class="fw-bold text-dark"><span class="subtotal">$0</span></td>
+                                        <td class="text-center">
+                                            <div class="form-check d-inline-block">
+                                                <input class="form-check-input" type="checkbox" name="entregado_0" checked>
+                                            </div>
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="row g-4 bg-light p-4 rounded-4 mx-0">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold small text-uppercase text-secondary">Total Venta</label>
+                                <input type="number" name="total" id="totalInput" class="form-control border-0 fs-4 fw-bold text-primary" readonly required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold small text-uppercase text-secondary">Abono Inicial</label>
+                                <input type="number" name="abono" class="form-control border-0 fw-bold" placeholder="0" value="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold small text-uppercase text-secondary">Cuotas</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="number" name="num_cuotas" class="form-control border-0" value="0">
+                                    <div class="form-check form-switch ms-2">
+                                        <input class="form-check-input" type="checkbox" id="contadoCheck">
+                                        <label class="form-check-label small fw-bold text-muted">Contado</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold small text-uppercase text-secondary">Frecuencia</label>
+                                <select name="frecuencia" class="form-select border-0">
+                                    <option value="quincenal">Quincenal</option>
+                                    <option value="mensual">Mensual</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cerrar</button>
+                <button type="submit" form="nuevaVentaForm" class="btn btn-primary px-5 rounded-pill shadow">Registrar Venta</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="stockWarningModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem;">
+            <div class="modal-body p-4 text-center">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-2"></i>
+                </div>
+                <h4 class="fw-bold mb-3">Stock Insuficiente</h4>
+                <div id="stockWarningBody" class="text-start mb-4"></div>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Corregir</button>
+                    <button type="button" class="btn btn-warning px-4" id="btnContinuarVenta">Vender de todos modos</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "ventas_js.html" %}
+{% endblock %}

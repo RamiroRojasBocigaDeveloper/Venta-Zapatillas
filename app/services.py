@@ -1,0 +1,206 @@
+from datetime import date, datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
+from typing import Optional
+
+from sqlalchemy.orm import Session
+
+from app.repositories import (
+    ClienteRepository,
+    ProductoRepository,
+    VentaRepository,
+    PagoRepository,
+)
+from app.models import Producto, VentaDetalle, MovimientoStock, VentaEliminada
+
+
+def generar_cuotas(total: Decimal, num_cuotas: int, fecha_inicio: date, frecuencia: str):
+    cuota_base = (total / Decimal(num_cuotas)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    delta_dias = 15 if frecuencia == "quincenal" else 30
+    cuotas = []
+    suma = Decimal("0")
+    for i in range(num_cuotas):
+        monto = cuota_base
+        if i == num_cuotas - 1:
+            monto = total - suma
+        vencimiento = fecha_inicio + timedelta(days=delta_dias * (i + 1))
+        cuotas.append({
+            "numero": i + 1,
+            "monto": monto,
+            "fecha_vencimiento": vencimiento,
+        })
+        suma += monto
+    return cuotas
+
+
+def crear_venta(db: Session, cliente_id: int, fecha: date, total: Decimal,
+                num_cuotas: int, frecuencia: str, notas: Optional[str],
+                abono: Optional[Decimal] = None,
+                productos: Optional[list[dict]] = None,
+                vendedor: str = ""):
+    venta_repo = VentaRepository(db)
+    pago_repo = PagoRepository(db)
+    abono = abono or Decimal("0")
+
+    if abono >= total:
+        num_cuotas = 0
+
+    if productos:
+        for item in productos:
+            producto = db.get(Producto, item["producto_id"])
+            if not producto:
+                raise ValueError(f"Producto ID {item['producto_id']} no encontrado")
+
+    venta = venta_repo.crear(cliente_id, fecha, total, num_cuotas, frecuencia, notas, vendedor=vendedor)
+
+    if productos:
+        for item in productos:
+            producto = db.get(Producto, item["producto_id"])
+            stock_anterior = producto.stock
+            producto.stock -= item["cantidad"]
+
+            detalle = VentaDetalle(
+                venta_id=venta.id,
+                producto_id=item["producto_id"],
+                cantidad=item["cantidad"],
+                precio_unitario=item["precio_unitario"],
+                precio_compra=producto.precio_compra,
+                entregado=item.get("entregado", False),
+            )
+            db.add(detalle)
+            db.add(MovimientoStock(
+                producto_id=producto.id,
+                cantidad=-item["cantidad"],
+                stock_anterior=stock_anterior,
+                stock_nuevo=producto.stock,
+                tipo="venta",
+                motivo=f"Venta #{venta.id}",
+                usuario=vendedor,
+                venta_id=venta.id,
+                fecha_hora=datetime.now(),
+            ))
+        db.flush()
+
+    if abono > 0:
+        pago = pago_repo.crear(venta.id, 0, abono, fecha)
+        db.flush()
+        pago_repo.pagar_por_venta_y_cuota(venta.id, 0, fecha)
+
+    if num_cuotas > 0:
+        restante = total - abono
+        cuotas = generar_cuotas(restante, num_cuotas, fecha, frecuencia)
+        for c in cuotas:
+            pago_repo.crear(venta.id, c["numero"], c["monto"], c["fecha_vencimiento"])
+
+    db.commit()
+    db.refresh(venta)
+    return venta
+
+
+def cerrar_venta(db: Session, venta_id: int):
+    venta_repo = VentaRepository(db)
+    venta = venta_repo.obtener(venta_id)
+    if not venta:
+        return None
+    pago_repo = PagoRepository(db)
+    for pago in venta.pagos:
+        if pago.fecha_pago is None:
+            pago_repo.pagar(pago.id, date.today())
+    db.commit()
+    db.refresh(venta)
+    return venta
+
+
+def marcar_entregado(db: Session, detalle_id: int, usuario: str = ""):
+    """Marca un detalle de venta como entregado al cliente."""
+    detalle = db.get(VentaDetalle, detalle_id)
+    if not detalle or detalle.entregado:
+        return None
+    detalle.entregado = True
+    db.commit()
+    db.refresh(detalle)
+    return detalle
+
+
+def pagar_cuota(db: Session, pago_id: int, fecha_pago: date):
+    pago_repo = PagoRepository(db)
+    return pago_repo.pagar(pago_id, fecha_pago)
+
+
+def reprogramar_cuota(db: Session, pago_id: int, nueva_fecha: date):
+    pago_repo = PagoRepository(db)
+    return pago_repo.reprogramar(pago_id, nueva_fecha)
+
+
+def obtener_deudores(db: Session):
+    pago_repo = PagoRepository(db)
+    resultados = pago_repo.cuotas_pendientes_por_cliente()
+
+    deudores = {}
+    for pago, venta, cliente in resultados:
+        if cliente.id not in deudores:
+            deudores[cliente.id] = {
+                "cliente": cliente,
+                "total_adeudado": Decimal("0.00"),
+                "cuotas": [],
+            }
+        deudores[cliente.id]["total_adeudado"] += pago.monto
+        deudores[cliente.id]["cuotas"].append({
+            "venta_id": venta.id,
+            "cuota_numero": pago.numero_cuota,
+            "monto": pago.monto,
+            "fecha_vencimiento": pago.fecha_vencimiento,
+            "pago_id": pago.id,
+        })
+
+    return list(deudores.values())
+
+
+def eliminar_venta(db: Session, venta_id: int, usuario: str = ""):
+    """Elimina una venta, restaura el stock de los productos y registra los movimientos con auditoría."""
+    import json
+    venta_repo = VentaRepository(db)
+    venta = venta_repo.obtener(venta_id)
+    if not venta:
+        return False
+
+    # 1. Registrar Auditoría de Eliminación
+    detalles_lista = []
+    for d in venta.detalles:
+        detalles_lista.append(f"{d.cantidad}x {d.producto.nombre} ({d.producto.marca})")
+    
+    audit = VentaEliminada(
+        venta_id_original=venta.id,
+        cliente_nombre=venta.cliente.nombre,
+        vendedor_original=venta.vendedor,
+        total=venta.total,
+        fecha_venta=venta.fecha,
+        fecha_eliminacion=datetime.now(),
+        usuario_que_elimino=usuario,
+        motivo="Eliminación administrativa con restauración de stock",
+        detalles_json=json.dumps(detalles_lista)
+    )
+    db.add(audit)
+
+    # 2. Restaurar stock de cada producto en la venta
+    for detalle in venta.detalles:
+        producto = detalle.producto
+        stock_anterior = producto.stock
+        producto.stock += detalle.cantidad
+
+        # Registrar el movimiento de stock como un ajuste por eliminación de venta
+        db.add(MovimientoStock(
+            producto_id=producto.id,
+            cantidad=detalle.cantidad,
+            stock_anterior=stock_anterior,
+            stock_nuevo=producto.stock,
+            tipo="ajuste",
+            motivo=f"Eliminación Venta #{venta.id}",
+            usuario=usuario,
+            venta_id=None,  # La venta dejará de existir
+            fecha_hora=datetime.now(),
+        ))
+
+    # 3. Eliminar la venta físicamente (la cascada borrará detalles y pagos)
+    db.delete(venta)
+    db.commit()
+    return True

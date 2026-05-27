@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Detalle de Venta #{{ venta.id }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+    <div class="col-12 col-lg-8">
+        <!-- Venta Card -->
+        <div class="card card-dashboard border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold outfit"><i class="bi bi-box-seam text-primary me-2"></i> Productos Vendidos</h5>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ venta.detalles|length }} ítems</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light">
+                            <tr class="small text-muted text-uppercase">
+                                <th class="ps-4">Producto</th>
+                                <th>Cant.</th>
+                                <th>Precio Unit.</th>
+                                <th>Subtotal</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in venta.detalles %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">{{ d.producto.nombre }}</div>
+                                    <small class="text-muted">Costo ref: {{ d.precio_compra|cop if d.precio_compra else 'N/A' }}</small>
+                                </td>
+                                <td class="fw-medium">{{ d.cantidad }}</td>
+                                <td>{{ d.precio_unitario|cop }}</td>
+                                <td class="fw-bold text-dark">{{ (d.cantidad * d.precio_unitario)|cop }}</td>
+                                <td>
+                                    {% if d.entregado %}
+                                    <span class="badge bg-success bg-opacity-10 text-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Entregado
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning">
+                                        <i class="bi bi-clock-fill me-1"></i> Pendiente
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    {% if not d.entregado %}
+                                    <form method="POST" action="/ventas/detalle/{{ d.id }}/entregar">
+                                        <button class="btn btn-sm btn-outline-success rounded-pill fw-bold">
+                                            <i class="bi bi-truck me-1"></i> Entregar
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-light border-0 p-4">
+                <div class="row g-3">
+                    <div class="col-6 col-md-3">
+                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.65rem;">Total Venta</small>
+                        <h4 class="mb-0 fw-bold outfit text-dark">{{ venta.total|cop }}</h4>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.65rem;">Saldo Pendiente</small>
+                        <h4 class="mb-0 fw-bold outfit text-danger">{{ (venta.total - total_pagado)|cop }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments Card -->
+        <div class="card card-dashboard border-0 shadow-sm">
+            <div class="card-header bg-white border-0 p-4">
+                <h5 class="mb-0 fw-bold outfit"><i class="bi bi-cash-stack text-success me-2"></i> Cronograma de Pagos</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light">
+                            <tr class="small text-muted text-uppercase">
+                                <th class="ps-4">#</th>
+                                <th>Monto</th>
+                                <th>Vencimiento</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in venta.pagos %}
+                            <tr>
+                                <td class="ps-4 text-muted">{{ 'Abono' if p.numero_cuota == 0 else 'Cuota ' ~ p.numero_cuota }}</td>
+                                <td class="fw-bold text-dark">{{ p.monto|cop }}</td>
+                                <td class="small">{{ p.fecha_vencimiento.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    {% if p.fecha_pago %}
+                                    <span class="badge bg-success bg-opacity-10 text-success">
+                                        <i class="bi bi-check-lg me-1"></i> Pagado el {{ p.fecha_pago.strftime('%d/%m/%Y') }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger">
+                                        <i class="bi bi-x-circle me-1"></i> Pendiente
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    {% if not p.fecha_pago %}
+                                    <div class="btn-group">
+                                        <form method="POST" action="/pago/{{ p.id }}/pagar">
+                                            <button class="btn btn-sm btn-success rounded-pill px-3 me-2">Pagar</button>
+                                        </form>
+                                        <button class="btn btn-sm btn-light rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#reprogramarModal{{ p.id }}">
+                                            Mover
+                                        </button>
+                                    </div>
+
+                                    <!-- Reprogram Modal -->
+                                    <div class="modal fade" id="reprogramarModal{{ p.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                                            <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.25rem;">
+                                                <div class="modal-body text-start">
+                                                    <h5 class="fw-bold mb-4">Reprogramar Pago</h5>
+                                                    <form method="POST" action="/pago/{{ p.id }}/reprogramar">
+                                                        <label class="form-label small fw-bold text-muted text-uppercase">Nueva Fecha de Vencimiento</label>
+                                                        <input type="date" name="fecha" class="form-control border-0 bg-light py-3 mb-4" style="border-radius: 0.75rem;" required>
+                                                        <div class="d-flex gap-2 justify-content-end">
+                                                            <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                                                            <button type="submit" class="btn btn-primary rounded-pill px-4">Actualizar</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Detail -->
+    <div class="col-12 col-lg-4">
+        <div class="card card-dashboard border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 p-4">
+                <h5 class="mb-0 fw-bold outfit">Información General</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-column gap-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 48px; height: 48px;">
+                            <i class="bi bi-person fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Cliente</div>
+                            <div class="fw-bold text-dark">{{ venta.cliente.nombre }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="bi bi-calendar-event fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Fecha Registro</div>
+                            <div class="fw-bold text-dark">{{ venta.fecha.strftime('%d de %B, %Y') }}</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="bi bi-person-badge fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Vendedor</div>
+                            <div class="fw-bold text-dark">{{ venta.vendedor or 'N/A' }}</div>
+                        </div>
+                    </div>
+                </div>
+                <hr class="my-4 opacity-5">
+                <div class="bg-light p-3 rounded-3 mb-4">
+                    <small class="text-muted d-block mb-1 fw-bold text-uppercase" style="font-size: 0.65rem;">Notas</small>
+                    <p class="mb-0 small text-dark">{{ venta.notas or 'Sin observaciones adicionales' }}</p>
+                </div>
+
+                {% if rol == "admin" %}
+                <div class="pt-2">
+                    <button class="btn btn-outline-danger w-100 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#eliminarVentaModal">
+                        <i class="bi bi-trash3-fill me-2"></i> Eliminar Venta
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if rol == "admin" %}
+<!-- Modal Eliminar Venta (Moved outside to avoid stacking issues) -->
+<div class="modal fade" id="eliminarVentaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.5rem;">
+            <div class="modal-body text-center">
+                <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-exclamation-octagon-fill fs-1"></i>
+                </div>
+                <h3 class="fw-bold outfit mb-3">¿Eliminar esta Venta?</h3>
+                <p class="text-muted mb-4 px-lg-5">
+                    Esta acción es irreversible. Se eliminará el registro de la venta, las cuotas de pago y **el stock de los productos será devuelto automáticamente** al inventario.
+                </p>
+                <form method="POST" action="/ventas/{{ venta.id }}/eliminar">
+                    <div class="d-flex flex-column gap-2">
+                        <button type="submit" class="btn btn-danger btn-lg rounded-pill fw-bold py-3 shadow-sm">
+                            Confirmar Eliminación y Devolver Stock
+                        </button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill fw-bold py-3" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

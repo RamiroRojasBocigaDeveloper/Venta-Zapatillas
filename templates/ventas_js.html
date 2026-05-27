@@ -1,0 +1,129 @@
+<script>
+let filaIdx = 1;
+
+document.getElementById('contadoCheck').addEventListener('change', function() {
+    const cuotasInput = document.querySelector('#nuevaVentaForm input[name="num_cuotas"]');
+    const freqSelect = document.querySelector('#nuevaVentaForm select[name="frecuencia"]');
+    const abonoInput = document.querySelector('#nuevaVentaForm input[name="abono"]');
+    const totalInput = document.getElementById('totalInput');
+    if (this.checked) {
+        cuotasInput.value = 0;
+        cuotasInput.disabled = true;
+        freqSelect.disabled = true;
+        abonoInput.value = totalInput.value;
+        abonoInput.readOnly = true;
+        abonoInput.style.backgroundColor = '#eef2f7';
+    } else {
+        cuotasInput.disabled = false;
+        freqSelect.disabled = false;
+        abonoInput.readOnly = false;
+        abonoInput.style.backgroundColor = '';
+    }
+});
+
+function actualizarPrecio(idx) {
+    const sel = document.querySelector(`#nuevaVentaForm select[name="producto_id_${idx}"]`);
+    const precioInput = document.querySelector(`#nuevaVentaForm input[name="precio_unitario_${idx}"]`);
+    const option = sel.options[sel.selectedIndex];
+    if (option && option.dataset.precio) {
+        precioInput.value = option.dataset.precio;
+    } else {
+        precioInput.value = '';
+    }
+    calcularSubtotal(idx);
+}
+
+function calcularSubtotal(idx) {
+    const cant = document.querySelector(`#nuevaVentaForm input[name="cantidad_${idx}"]`);
+    const precioInput = document.querySelector(`#nuevaVentaForm input[name="precio_unitario_${idx}"]`);
+    const span = document.querySelector(`#fila${idx} .subtotal`);
+    const c = parseInt(cant.value) || 0;
+    const p = parseInt(precioInput.value) || 0;
+    const sub = c * p;
+    span.textContent = '$' + sub.toLocaleString('es-CO');
+    recalcularTotal();
+}
+
+function recalcularTotal() {
+    let total = 0;
+    document.querySelectorAll('.subtotal').forEach(el => {
+        const val = parseInt(el.textContent.replace(/[^0-9]/g, '')) || 0;
+        total += val;
+    });
+    const totalInput = document.getElementById('totalInput');
+    totalInput.value = total;
+    if (document.getElementById('contadoCheck').checked) {
+        document.querySelector('#nuevaVentaForm input[name="abono"]').value = total;
+    }
+}
+
+function agregarFila() {
+    const idx = filaIdx++;
+    const tbody = document.querySelector('#productosTable tbody');
+    const fila = document.createElement('tr');
+    fila.id = `fila${idx}`;
+    fila.innerHTML = `
+        <td>
+            <select name="producto_id_${idx}" class="form-select border-0 producto-select bg-white" onchange="actualizarPrecio(${idx})" style="border-radius: 0.5rem;">
+                <option value="">Elija...</option>
+                {% for p in productos %}
+                <option value="{{ p.id }}" data-precio="{{ p.precio }}" data-stock="{{ p.stock }}">{{ p.nombre }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td><input type="number" name="cantidad_${idx}" class="form-control border-0 cantidad bg-white" value="1" min="1" oninput="calcularSubtotal(${idx})"></td>
+        <td><input type="number" name="precio_unitario_${idx}" class="form-control border-0 precio-unitario bg-white" oninput="calcularSubtotal(${idx})"></td>
+        <td class="fw-bold text-dark"><span class="subtotal">$0</span></td>
+        <td class="text-center">
+            <div class="form-check d-inline-block">
+                <input class="form-check-input" type="checkbox" name="entregado_${idx}" checked>
+            </div>
+        </td>
+        <td>
+            <button type="button" class="btn btn-link text-danger p-0" onclick="this.closest('tr').remove(); recalcularTotal();">
+                <i class="bi bi-trash-fill"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(fila);
+}
+
+document.getElementById('nuevaVentaForm').addEventListener('submit', function(e) {
+    const advertencias = [];
+    const filas = document.querySelectorAll('#productosTable tbody tr');
+    filas.forEach(fila => {
+        const sel = fila.querySelector('.producto-select');
+        const cantInput = fila.querySelector('.cantidad');
+        if (!sel || !cantInput) return;
+        const option = sel.options[sel.selectedIndex];
+        if (!option || !option.value) return;
+        const stock = parseInt(option.dataset.stock) || 0;
+        const cantidad = parseInt(cantInput.value) || 0;
+        if (cantidad > stock) {
+            advertencias.push({ producto: option.text, stock: stock, cantidad: cantidad });
+        }
+    });
+
+    if (advertencias.length > 0) {
+        e.preventDefault();
+        const body = document.getElementById('stockWarningBody');
+        body.innerHTML = `
+            <div class="small text-muted mb-2">Se detectaron productos sin stock suficiente:</div>
+            <div class="list-group list-group-flush">
+                ${advertencias.map(a => `
+                    <div class="list-group-item bg-transparent d-flex justify-content-between p-2">
+                        <span>${a.producto}</span>
+                        <span class="text-danger fw-bold">Stock: ${a.stock}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        const modal = new bootstrap.Modal(document.getElementById('stockWarningModal'));
+        modal.show();
+        document.getElementById('btnContinuarVenta').onclick = () => {
+            modal.hide();
+            this.submit();
+        };
+    }
+});
+</script>

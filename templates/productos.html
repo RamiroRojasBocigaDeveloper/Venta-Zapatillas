@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Inventario de Productos{% block header_title %}Productos y Stock{% endblock %}{% endblock %}
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="card card-dashboard border-0 shadow-sm p-4" style="border-left: 5px solid var(--primary) !important;">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary bg-opacity-10 p-3 rounded-3 text-primary">
+                    <i class="bi bi-box-seam fs-3"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted small fw-bold text-uppercase mb-1">Total Modelos</h6>
+                    <h3 class="mb-0 fw-bold outfit">{{ productos|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-dashboard border-0 shadow-sm overflow-hidden">
+    <div class="card-header bg-white border-0 p-4">
+        <div class="row g-3 align-items-center">
+            <div class="col-12 col-md-6">
+                <form method="GET" class="position-relative">
+                    <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+                    <input type="text" name="q" class="form-control form-control-lg border-0 bg-light ps-5" placeholder="Buscar por nombre, marca o ref..." value="{{ q }}">
+                </form>
+            </div>
+            <div class="col-12 col-md-6 text-md-end">
+                <button class="btn btn-primary btn-lg px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#nuevoProductoModal">
+                    <i class="bi bi-plus-lg me-2"></i> Nuevo Producto
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Producto / Detalles</th>
+                        <th>Marca</th>
+                        <th>Ref.</th>
+                        <th>Precio Venta</th>
+                        <th>Costo</th>
+                        <th>Stock</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in productos %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark fs-6">{{ p.nombre }}</div>
+                            <small class="text-muted">ID: #{{ p.id }}</small>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">{{ p.marca or 'N/A' }}</span></td>
+                        <td><code class="text-muted small">{{ p.referencia or '-' }}</code></td>
+                        <td class="fw-bold text-primary">{{ p.precio|cop }}</td>
+                        <td class="text-muted small">{{ p.precio_compra|cop }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold {% if p.stock <= 0 %}text-danger{% elif p.stock < 5 %}text-warning{% else %}text-success{% endif %}">{{ p.stock }}</span>
+                                <div class="progress flex-grow-1" style="height: 4px; min-width: 50px;">
+                                    <div class="progress-bar {% if p.stock <= 0 %}bg-danger{% elif p.stock < 5 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         style="width: {% if p.stock > 20 %}100{% else %}{{ (p.stock/20)*100 }}{% endif %}%"></div>
+                                </div>
+                                <button class="btn btn-sm btn-light p-1 rounded-circle border" title="Ajustar Stock"
+                                        data-bs-toggle="modal" data-bs-target="#ajusteStockModal"
+                                        data-prod-id="{{ p.id }}" data-prod-nombre="{{ p.nombre }}" data-prod-stock="{{ p.stock }}">
+                                    <i class="bi bi-plus-slash-minus text-primary"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-light btn-sm rounded-pill text-primary fw-bold px-3"
+                                    data-bs-toggle="modal" data-bs-target="#editarProductoModal"
+                                    data-prod-id="{{ p.id }}"
+                                    data-prod-nombre="{{ p.nombre }}"
+                                    data-prod-marca="{{ p.marca }}"
+                                    data-prod-ref="{{ p.referencia }}"
+                                    data-prod-precio="{{ p.precio }}"
+                                    data-prod-costo="{{ p.precio_compra }}">
+                                Editar
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nuevo Producto -->
+<div class="modal fade" id="nuevoProductoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.5rem;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold fs-3">Nuevo Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="/productos" class="row g-4">
+                    <div class="col-12">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Nombre / Modelo</label>
+                        <input type="text" name="nombre" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Marca</label>
+                        <input type="text" name="marca" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Referencia</label>
+                        <input type="text" name="referencia" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Precio de Venta</label>
+                        <input type="number" name="precio" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Costo (Compra)</label>
+                        <input type="number" name="precio_compra" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;" value="0">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Stock Inicial</label>
+                        <input type="number" name="stock" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;" value="0">
+                    </div>
+                    <div class="col-12 mt-4 text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill shadow">Guardar Producto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Producto -->
+<div class="modal fade" id="editarProductoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.5rem;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold fs-3">Editar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="editarProductoForm" class="row g-4">
+                    <div class="col-12">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Nombre / Modelo</label>
+                        <input type="text" name="nombre" id="edit_nombre" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Marca</label>
+                        <input type="text" name="marca" id="edit_marca" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Referencia</label>
+                        <input type="text" name="referencia" id="edit_referencia" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Precio de Venta</label>
+                        <input type="number" name="precio" id="edit_precio" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Costo (Compra)</label>
+                        <input type="number" name="precio_compra" id="edit_costo" class="form-control border-0 bg-light py-3" style="border-radius: 0.75rem;">
+                    </div>
+                    <div class="col-12 mt-4 text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill shadow">Actualizar Producto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Ajuste de Stock (The missing logic!) -->
+<div class="modal fade" id="ajusteStockModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.5rem;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold fs-4">Ajustar Inventario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-4" id="ajusteStockNombre"></p>
+                <form method="POST" id="ajusteStockForm" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Tipo de Movimiento</label>
+                        <select name="tipo" class="form-select border-0 bg-light" required>
+                            <option value="compra">Compra (Suma)</option>
+                            <option value="ajuste">Ajuste Manual (+ o -)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Cantidad</label>
+                        <input type="number" name="cantidad" class="form-control border-0 bg-light" required placeholder="Ej: 5 o -2">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Stock Actual</label>
+                        <input type="text" id="ajusteStockTotal" class="form-control border-0 bg-white" readonly>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Motivo de la actualización</label>
+                        <textarea name="motivo" class="form-control border-0 bg-light" rows="2" placeholder="Ej: Ingreso por compra, Devolución..." required></textarea>
+                    </div>
+                    <div class="col-12 mt-3 text-end">
+                        <button type="submit" class="btn btn-warning w-100 rounded-pill fw-bold">Registrar Movimiento</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('[data-bs-target="#editarProductoModal"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const id = this.dataset.prodId;
+        document.getElementById('editarProductoForm').action = `/productos/${id}/editar`;
+        document.getElementById('edit_nombre').value = this.dataset.prodNombre;
+        document.getElementById('edit_marca').value = this.dataset.prodMarca;
+        document.getElementById('edit_referencia').value = this.dataset.prodRef;
+        document.getElementById('edit_precio').value = this.dataset.prodPrecio;
+        document.getElementById('edit_costo').value = this.dataset.prodCosto;
+    });
+});
+
+document.querySelectorAll('[data-bs-target="#ajusteStockModal"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const id = this.dataset.prodId;
+        document.getElementById('ajusteStockForm').action = `/productos/${id}/ajustar-stock`;
+        document.getElementById('ajusteStockNombre').textContent = 'Producto: ' + this.dataset.prodNombre;
+        document.getElementById('ajusteStockTotal').value = this.dataset.prodStock;
+    });
+});
+</script>
+{% endblock %}

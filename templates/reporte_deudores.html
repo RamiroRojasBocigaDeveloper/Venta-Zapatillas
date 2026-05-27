@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Reporte de Deudores{% endblock %}
+{% block content %}
+<div class="card card-dashboard border-0 shadow-sm overflow-hidden">
+    <div class="card-header bg-white border-0 p-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-1 fw-bold outfit">Cuentas por Cobrar</h5>
+                <p class="text-muted small mb-0">Listado consolidado de clientes con saldo pendiente</p>
+            </div>
+            <div class="bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-3 fw-bold">
+                {{ deudores|length }} Clientes con Deuda
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Cliente</th>
+                        <th>Total Adeudado</th>
+                        <th>Cuotas Pendientes</th>
+                        <th>Próximo Vencimiento</th>
+                        <th class="text-end pe-4">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in deudores %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark">{{ d.cliente.nombre }}</div>
+                            <small class="text-muted"><i class="bi bi-telephone small"></i> {{ d.cliente.telefono }}</small>
+                        </td>
+                        <td class="fw-bold text-danger">{{ d.total_adeudado|cop }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ d.cuotas|length }} cuotas</span>
+                        </td>
+                        <td>
+                             <!-- Find first pending date (simplified logic for template) -->
+                             <span class="small text-muted">{{ d.cuotas[0].fecha_vencimiento.strftime('%d/%m/%Y') }}</span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="/ventas/{{ d.cuotas[0].venta_id }}" class="btn btn-light btn-sm rounded-pill px-3 fw-bold text-primary">
+                                Ver última venta
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-check-circle fs-1 d-block mb-3 opacity-25 text-success"></i>
+                            ¡Felicidades! No hay clientes con deudas pendientes.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
