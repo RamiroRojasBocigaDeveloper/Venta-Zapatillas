@@ -18,17 +18,19 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 def crear_o_actualizar_admin(db: Session):
     repo = UsuarioRepository(db)
+    print(f"DEBUG: Configurando admin. Username: '{settings.admin_username}', Password len: {len(settings.admin_password)}")
     admin = repo.obtener_por_username(settings.admin_username)
     hash_pw = bcrypt.hashpw(settings.admin_password.encode(), bcrypt.gensalt()).decode()
     
     if admin:
-        # Sincronizamos rol y contraseña con las variables de entorno
+        print(f"DEBUG: Usuario '{settings.admin_username}' ya existe. Sincronizando contraseña...")
         admin.rol = "admin"
         admin.password_hash = hash_pw
     else:
-        # Creamos el usuario si no existe
+        print(f"DEBUG: Creando nuevo usuario administrador: '{settings.admin_username}'")
         repo.crear(settings.admin_username, hash_pw, "admin")
     db.commit()
+    print("DEBUG: Sincronización de admin completada.")
 
 
 @asynccontextmanager
