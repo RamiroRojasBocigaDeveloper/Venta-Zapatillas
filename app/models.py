@@ -88,6 +88,8 @@ class MovimientoStock(Base):
     cantidad: Mapped[int] = mapped_column(Integer, nullable=False)
     stock_anterior: Mapped[int] = mapped_column(Integer, nullable=False)
     stock_nuevo: Mapped[int] = mapped_column(Integer, nullable=False)
+    stock_comprometido_anterior: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    stock_comprometido_nuevo: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     tipo: Mapped[str] = mapped_column(String(20), nullable=False)
     motivo: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     usuario: Mapped[str] = mapped_column(String(100), nullable=False, default="")
@@ -107,6 +109,7 @@ class Pago(Base):
     monto: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     fecha_vencimiento: Mapped[date] = mapped_column(Date, nullable=False)
     fecha_pago: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    cobrado_por: Mapped[str] = mapped_column(String(100), nullable=False, default="")
 
     venta: Mapped["Venta"] = relationship("Venta", back_populates="pagos")
 
@@ -122,5 +125,6 @@ class VentaEliminada(Base):
     fecha_venta: Mapped[date] = mapped_column(Date, nullable=False)
     fecha_eliminacion: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
     usuario_que_elimino: Mapped[str] = mapped_column(String(100), nullable=False)
+    total_pagado_reembolsado: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=0)
     motivo: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     detalles_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Lista de productos borrados

@@ -12,6 +12,25 @@
 </div>
 {% endif %}
 
+{% if por_conseguir %}
+<div class="alert shadow-sm border-0 d-flex gap-3 mb-4 p-4 align-items-center" style="border-radius: 1rem; background: linear-gradient(135deg, #fff3cd, #fff8e1);">
+    <div class="bg-warning bg-opacity-25 text-warning rounded-circle d-flex align-items-center justify-content-center p-3">
+        <i class="bi bi-cart-x-fill fs-3 text-dark"></i>
+    </div>
+    <div class="flex-grow-1">
+        <h5 class="mb-1 fw-bold text-dark outfit mb-0">Atención: Hay preventas esperando mercancía física</h5>
+        <div class="mt-2 d-flex flex-wrap gap-2">
+            {% for p in por_conseguir %}
+            <span class="badge bg-white text-dark border shadow-sm fs-6 text-start d-inline-block">
+                {{ p.nombre }}
+                <span class="text-danger fw-bold ms-2">Faltan {{ p.stock_comprometido - p.stock }} uds.</span>
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="card card-dashboard border-0 shadow-sm overflow-hidden">
     <div class="card-header bg-white border-0 p-4">
         <div class="row g-3 align-items-center">
@@ -74,11 +93,11 @@
                         <td>
                             {% if v.productos_pendientes == 0 %}
                             <span class="badge bg-success bg-opacity-10 text-success">
-                                <i class="bi bi-truck-flatbed me-1"></i> Entregado
+                                <i class="bi bi-truck-flatbed me-1"></i> Entregado al Cliente
                             </span>
                             {% else %}
                             <span class="badge bg-primary bg-opacity-10 text-primary">
-                                <i class="bi bi-box-seam-fill me-1"></i> {{ v.productos_pendientes }} Pendiente
+                                <i class="bi bi-box-seam-fill me-1"></i> Preventa (Faltan {{ v.productos_pendientes }})
                             </span>
                             {% endif %}
                         </td>
@@ -183,7 +202,7 @@
                             <div class="col-md-3">
                                 <label class="form-label fw-bold small text-uppercase text-secondary">Cuotas</label>
                                 <div class="d-flex align-items-center gap-2">
-                                    <input type="number" name="num_cuotas" class="form-control border-0" value="0">
+                                    <input type="number" name="num_cuotas" class="form-control border-0" value="1" min="0" placeholder="Ej: 3">
                                     <div class="form-check form-switch ms-2">
                                         <input class="form-check-input" type="checkbox" id="contadoCheck">
                                         <label class="form-check-label small fw-bold text-muted">Contado</label>

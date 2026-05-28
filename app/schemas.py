@@ -15,14 +15,14 @@ class ProductoCreate(BaseModel):
     nombre: str = Field(..., min_length=1, max_length=200)
     marca: str = Field(..., min_length=1, max_length=100)
     referencia: str = Field(..., min_length=1, max_length=100)
-    precio_compra: Decimal = Field(..., ge=0, decimal_places=0)
-    precio: Decimal = Field(..., gt=0, decimal_places=0)
+    precio_compra: Decimal = Field(..., ge=0, decimal_places=2)
+    precio: Decimal = Field(..., gt=0, decimal_places=2)
 
 
 class VentaCreate(BaseModel):
     cliente_id: int = Field(..., gt=0)
     fecha: date
-    total: Decimal = Field(..., gt=0, decimal_places=0)
+    total: Decimal = Field(..., gt=0, decimal_places=2)
     num_cuotas: int = Field(..., gt=0)
     frecuencia: str = Field(..., pattern="^(quincenal|mensual)$")
     notas: Optional[str] = Field(None)

@@ -1,6 +1,7 @@
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 import os
+from urllib.parse import urlparse
 
 class CSRFProtectionMiddleware(BaseHTTPMiddleware):
     """
@@ -14,9 +15,9 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
             host = request.headers.get("Host", "")
             
             is_valid = False
-            if origin and host in origin:
+            if origin and urlparse(origin).netloc == host:
                 is_valid = True
-            elif referer and host in referer:
+            elif referer and urlparse(referer).netloc == host:
                 is_valid = True
                 
             if not is_valid:

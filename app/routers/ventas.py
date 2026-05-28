@@ -47,11 +47,13 @@ def listar_ventas(request: Request, db: Session = Depends(get_db), q: str = ""):
     producto_repo = ProductoRepository(db)
     clientes = cliente_repo.listar()
     productos = producto_repo.listar()
+    por_conseguir = [p for p in productos if p.stock_comprometido > p.stock]
     error_venta = request.query_params.get("error_venta")
     return templates.TemplateResponse(request, "ventas.html", {
         "ventas": ventas_con_pagado,
         "clientes": clientes,
         "productos": productos,
+        "por_conseguir": por_conseguir,
         "hoy": date.today(),
         "q": q,
         "error_venta": error_venta,
@@ -78,7 +80,7 @@ async def registrar_venta(request: Request, db: Session = Depends(get_db)):
 
         if abono < 0:
             raise ValueError("El abono no puede ser negativo")
-        if abono >= total or num_cuotas <= 0:
+        if abono >= total:
             num_cuotas = 0
 
         productos_raw = []
@@ -146,10 +148,12 @@ def cerrar(venta_id: int, request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/pagar/{pago_id}")
-def pagar(pago_id: int, db: Session = Depends(get_db)):
-    pago = PagoRepository(db).pagar(pago_id, date.today())
+def pagar(pago_id: int, request: Request, db: Session = Depends(get_db)):
+    usuario = request.session.get("username", "")
+    pago = PagoRepository(db).pagar(pago_id, date.today(), cobrado_por=usuario)
     if not pago:
         raise HTTPException(status_code=404, detail="Pago no encontrado o ya pagado")
+    db.commit()
     return RedirectResponse(url=f"/ventas/{pago.venta_id}", status_code=303)
 
 

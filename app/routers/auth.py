@@ -10,9 +10,9 @@ from slowapi.util import get_remote_address
 from app.database import get_db
 from app.repositories import UsuarioRepository
 from app.templating import templates
+from app.limiter import limiter
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/login")

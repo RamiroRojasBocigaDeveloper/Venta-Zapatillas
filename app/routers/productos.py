@@ -111,6 +111,7 @@ def ajustar_stock(
     request: Request,
     cantidad: int = Form(...),
     tipo: str = Form(...),
+    tipo_inventario: str = Form("fisico"),
     motivo: str = Form(...),
     db: Session = Depends(get_db),
 ):
@@ -132,13 +133,20 @@ def ajustar_stock(
         )
 
     stock_anterior = producto.stock
-    producto.stock += cantidad
+    stock_comprometido_anterior = producto.stock_comprometido
+    
+    if tipo_inventario == "comprometido":
+        producto.stock_comprometido += cantidad
+    else:
+        producto.stock += cantidad
 
     db.add(MovimientoStock(
         producto_id=producto.id,
         cantidad=cantidad,
         stock_anterior=stock_anterior,
         stock_nuevo=producto.stock,
+        stock_comprometido_anterior=stock_comprometido_anterior,
+        stock_comprometido_nuevo=producto.stock_comprometido,
         tipo=tipo,
         motivo=motivo,
         usuario=request.session.get("username", ""),

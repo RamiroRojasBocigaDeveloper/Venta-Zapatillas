@@ -159,20 +159,21 @@ class PagoRepository:
         self.db.add(pago)
         return pago
 
-    def pagar_por_venta_y_cuota(self, venta_id: int, numero_cuota: int, fecha_pago: date) -> Optional[Pago]:
+    def pagar_por_venta_y_cuota(self, venta_id: int, numero_cuota: int, fecha_pago: date, cobrado_por: str = "") -> Optional[Pago]:
         pago = self.db.execute(
             select(Pago).where(Pago.venta_id == venta_id, Pago.numero_cuota == numero_cuota)
         ).scalar_one_or_none()
         if pago and pago.fecha_pago is None:
             pago.fecha_pago = fecha_pago
+            pago.cobrado_por = cobrado_por
         return pago
 
-    def pagar(self, pago_id: int, fecha_pago: date) -> Optional[Pago]:
+    def pagar(self, pago_id: int, fecha_pago: date, cobrado_por: str = "") -> Optional[Pago]:
         pago = self.obtener(pago_id)
         if pago and pago.fecha_pago is None:
             pago.fecha_pago = fecha_pago
-            self.db.commit()
-            self.db.refresh(pago)
+            pago.cobrado_por = cobrado_por
+            self.db.flush()
         return pago
 
     def reprogramar(self, pago_id: int, nueva_fecha: date) -> Optional[Pago]:
@@ -217,7 +218,7 @@ class UsuarioRepository:
     def crear(self, username: str, password_hash: str, rol: str = "vendedor") -> Usuario:
         usuario = Usuario(username=username, password_hash=password_hash, rol=rol)
         self.db.add(usuario)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(usuario)
         return usuario
 
@@ -226,8 +227,7 @@ class UsuarioRepository:
         if not usuario:
             return None
         usuario.rol = rol
-        self.db.commit()
-        self.db.refresh(usuario)
+        self.db.flush()
         return usuario
 
     def cambiar_password(self, usuario_id: int, password_hash: str) -> Optional[Usuario]:
@@ -235,8 +235,7 @@ class UsuarioRepository:
         if not usuario:
             return None
         usuario.password_hash = password_hash
-        self.db.commit()
-        self.db.refresh(usuario)
+        self.db.flush()
         return usuario
 
     def eliminar(self, usuario_id: int) -> bool:
@@ -244,7 +243,7 @@ class UsuarioRepository:
         if not usuario:
             return False
         self.db.delete(usuario)
-        self.db.commit()
+        self.db.flush()
         return True
 
 

@@ -31,6 +31,7 @@ def crear_cliente(
 ):
     repo = ClienteRepository(db)
     repo.crear(nombre, telefono, direccion)
+    db.commit()
     return RedirectResponse(url="/clientes", status_code=303)
 
 
@@ -47,4 +48,5 @@ def editar_cliente(
     cliente = repo.actualizar(cliente_id, nombre, telefono, direccion)
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    db.commit()
     return RedirectResponse(url="/clientes", status_code=303)

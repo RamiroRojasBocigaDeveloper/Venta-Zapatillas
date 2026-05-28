@@ -3,17 +3,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+
+from app.limiter import limiter
 
 from app.config import settings
 from app.database import engine, SessionLocal, Base
 from app.repositories import UsuarioRepository
 from app.dependencies import require_session, require_admin
 from app.middleware import CSRFProtectionMiddleware
-
-limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 
 def crear_o_actualizar_admin(db: Session):
@@ -23,9 +22,7 @@ def crear_o_actualizar_admin(db: Session):
     hash_pw = bcrypt.hashpw(settings.admin_password.encode(), bcrypt.gensalt()).decode()
     
     if admin:
-        print(f"DEBUG: Usuario '{settings.admin_username}' ya existe. Sincronizando contraseña...")
-        admin.rol = "admin"
-        admin.password_hash = hash_pw
+        print(f"DEBUG: Usuario '{settings.admin_username}' ya existe. Conservando su clave y roles guardados.")
     else:
         print(f"DEBUG: Creando nuevo usuario administrador: '{settings.admin_username}'")
         repo.crear(settings.admin_username, hash_pw, "admin")

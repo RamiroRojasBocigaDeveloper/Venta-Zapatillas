@@ -50,7 +50,9 @@ def crear_usuario(
     try:
         hash_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         repo.crear(username, hash_pw, rol_usuario)
+        db.commit()
     except Exception:
+        db.rollback()
         return RedirectResponse(
             url=f"/usuarios?error_usuario={quote('Error al crear el usuario. Intenta de nuevo.')}",
             status_code=303,
@@ -113,6 +115,7 @@ def eliminar_usuario(usuario_id: int, request: Request, db: Session = Depends(ge
             status_code=303,
         )
     repo.eliminar(usuario_id)
+    db.commit()
     return RedirectResponse(
         url=f"/usuarios?success_usuario={quote('Usuario eliminado correctamente')}",
         status_code=303,

@@ -89,6 +89,12 @@ function agregarFila() {
 }
 
 document.getElementById('nuevaVentaForm').addEventListener('submit', function(e) {
+    // Re-enable disabled inputs so their values are included in the form data
+    const cuotasInput = document.querySelector('#nuevaVentaForm input[name="num_cuotas"]');
+    const freqSelect = document.querySelector('#nuevaVentaForm select[name="frecuencia"]');
+    if (cuotasInput && cuotasInput.disabled) cuotasInput.disabled = false;
+    if (freqSelect && freqSelect.disabled) freqSelect.disabled = false;
+
     const advertencias = [];
     const filas = document.querySelectorAll('#productosTable tbody tr');
     filas.forEach(fila => {
