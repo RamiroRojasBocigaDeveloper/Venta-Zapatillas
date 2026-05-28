@@ -178,8 +178,7 @@ class PagoRepository:
         pago = self.obtener(pago_id)
         if pago and pago.fecha_pago is None:
             pago.fecha_vencimiento = nueva_fecha
-            self.db.commit()
-            self.db.refresh(pago)
+            self.db.flush()
         return pago
 
     def listar_por_venta(self, venta_id: int) -> list[Pago]:

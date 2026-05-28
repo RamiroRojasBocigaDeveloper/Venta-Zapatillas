@@ -191,6 +191,7 @@ def reprogramar(
     pago = reprogramar_cuota(db, pago_id, fecha)
     if not pago:
         raise HTTPException(status_code=404, detail="Pago no encontrado o ya pagado")
+    db.commit()
     return RedirectResponse(url=f"/ventas/{pago.venta_id}", status_code=303)
 
 
