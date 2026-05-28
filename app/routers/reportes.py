@@ -28,6 +28,8 @@ def inicio(request: Request, db: Session = Depends(get_db)):
     top_deudores = deudores[:5]
 
     pendientes_entrega = reporte_repo.contar_ventas_pendientes_entrega()
+    productos = producto_repo.listar()
+    por_conseguir = [p for p in productos if p.stock_comprometido > p.stock]
 
     return templates.TemplateResponse(request, "inicio.html", {
         "username": request.session.get("username"),
@@ -40,6 +42,7 @@ def inicio(request: Request, db: Session = Depends(get_db)):
         "ganancia_total": ganancia_total,
         "ultimas_ventas": ultimas_ventas,
         "top_deudores": top_deudores,
+        "por_conseguir": por_conseguir,
     })
 
 

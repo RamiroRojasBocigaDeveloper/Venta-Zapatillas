@@ -57,7 +57,40 @@
             </div>
         </div>
     </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card card-dashboard h-100 border-0 shadow-sm" style="border-left: 5px solid #6f42c1 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="p-3 rounded-3" style="background: rgba(111,66,193,0.1);">
+                        <i class="bi bi-truck fs-4" style="color:#6f42c1;"></i>
+                    </div>
+                </div>
+                <h6 class="text-muted small fw-bold text-uppercase opacity-75 mb-1">Entregas Pendientes</h6>
+                <h2 class="mb-0 fw-bold outfit" style="color:#6f42c1;">{{ pendientes_entrega }} <small class="fs-6 fw-normal text-muted">ventas</small></h2>
+            </div>
+        </div>
+    </div>
 </div>
+
+{% if por_conseguir %}
+<div class="alert border-0 shadow-sm d-flex gap-3 mb-4 p-4 align-items-center" style="border-radius:1rem; background: linear-gradient(135deg,#fff3cd,#fff8e1);">
+    <div class="bg-warning bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center p-3">
+        <i class="bi bi-cart-x-fill fs-3 text-dark"></i>
+    </div>
+    <div class="flex-grow-1">
+        <h6 class="fw-bold text-dark mb-1">Hay preventas esperando mercancía</h6>
+        <div class="d-flex flex-wrap gap-2 mt-1">
+            {% for p in por_conseguir %}
+            <span class="badge bg-white text-dark border shadow-sm">
+                {{ p.nombre }}
+                <span class="text-danger fw-bold ms-1">Faltan {{ p.stock_comprometido - p.stock }} uds.</span>
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="row g-4">
     <div class="col-12 col-lg-8">

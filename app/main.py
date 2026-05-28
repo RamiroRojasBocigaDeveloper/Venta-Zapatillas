@@ -1,4 +1,5 @@
 import bcrypt
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from starlette.middleware.sessions import SessionMiddleware
@@ -15,19 +16,22 @@ from app.dependencies import require_session, require_admin
 from app.middleware import CSRFProtectionMiddleware
 
 
+logger = logging.getLogger(__name__)
+
+
 def crear_o_actualizar_admin(db: Session):
     repo = UsuarioRepository(db)
-    print(f"DEBUG: Configurando admin. Username: '{settings.admin_username}', Password len: {len(settings.admin_password)}")
+    logger.info("Configurando admin. Username: '%s'", settings.admin_username)
     admin = repo.obtener_por_username(settings.admin_username)
     hash_pw = bcrypt.hashpw(settings.admin_password.encode(), bcrypt.gensalt()).decode()
-    
+
     if admin:
-        print(f"DEBUG: Usuario '{settings.admin_username}' ya existe. Conservando su clave y roles guardados.")
+        logger.info("Usuario '%s' ya existe. Conservando clave actual.", settings.admin_username)
     else:
-        print(f"DEBUG: Creando nuevo usuario administrador: '{settings.admin_username}'")
+        logger.info("Creando nuevo usuario administrador: '%s'", settings.admin_username)
         repo.crear(settings.admin_username, hash_pw, "admin")
     db.commit()
-    print("DEBUG: Sincronización de admin completada.")
+    logger.info("Sincronización de admin completada.")
 
 
 def run_migrations():

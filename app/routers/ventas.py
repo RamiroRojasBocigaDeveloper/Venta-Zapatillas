@@ -82,6 +82,8 @@ async def registrar_venta(request: Request, db: Session = Depends(get_db)):
             raise ValueError("El abono no puede ser negativo")
         if abono >= total:
             num_cuotas = 0
+        elif num_cuotas <= 0:
+            raise ValueError("Debes especificar al menos 1 cuota cuando el abono no cubre el total")
 
         productos_raw = []
         for key in form:
@@ -193,10 +195,10 @@ def reprogramar(
 
 
 @router.post("/ventas/detalle/{detalle_id}/entregar")
-def entregar_producto(detalle_id: int, db: Session = Depends(get_db)):
-    from app.models import VentaDetalle
+def entregar_producto(detalle_id: int, request: Request, db: Session = Depends(get_db)):
+    usuario = request.session.get("username", "")
     try:
-        detalle = marcar_entregado(db, detalle_id)
+        detalle = marcar_entregado(db, detalle_id, usuario=usuario)
         if not detalle:
             raise HTTPException(status_code=404, detail="Detalle no encontrado o ya entregado")
         return RedirectResponse(url=f"/ventas/{detalle.venta_id}", status_code=303)

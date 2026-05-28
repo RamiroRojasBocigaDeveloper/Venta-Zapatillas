@@ -1,7 +1,10 @@
 import json
+import logging
 from datetime import date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy.orm import Session
 
@@ -96,7 +99,7 @@ def crear_venta(db: Session, cliente_id: int, fecha: date, total: Decimal,
     if abono > 0:
         pago = pago_repo.crear(venta.id, 0, abono, fecha)
         db.flush()
-        pago_repo.pagar_por_venta_y_cuota(venta.id, 0, fecha)
+        pago_repo.pagar_por_venta_y_cuota(venta.id, 0, fecha, cobrado_por=vendedor)
 
     if num_cuotas > 0:
         restante = total - abono

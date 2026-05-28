@@ -33,7 +33,7 @@ class ClienteRepository:
     def crear(self, nombre: str, telefono: str, direccion: Optional[str]) -> Cliente:
         cliente = Cliente(nombre=nombre, telefono=telefono, direccion=direccion)
         self.db.add(cliente)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(cliente)
         return cliente
 
@@ -47,8 +47,7 @@ class ClienteRepository:
         cliente.nombre = nombre
         cliente.telefono = telefono
         cliente.direccion = direccion
-        self.db.commit()
-        self.db.refresh(cliente)
+        self.db.flush()
         return cliente
 
     def eliminar(self, cliente_id: int) -> bool:
@@ -56,7 +55,7 @@ class ClienteRepository:
         if not cliente:
             return False
         self.db.delete(cliente)
-        self.db.commit()
+        self.db.flush()
         return True
 
 
@@ -81,7 +80,7 @@ class ProductoRepository:
     def crear(self, nombre: str, marca: str, referencia: str, precio_compra: Decimal, precio: Decimal, stock: int = 0) -> Producto:
         producto = Producto(nombre=nombre, marca=marca, referencia=referencia, precio_compra=precio_compra, precio=precio, stock=stock)
         self.db.add(producto)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(producto)
         return producto
 
@@ -98,8 +97,7 @@ class ProductoRepository:
         producto.referencia = referencia
         producto.precio_compra = precio_compra
         producto.precio = precio
-        self.db.commit()
-        self.db.refresh(producto)
+        self.db.flush()
         return producto
 
     def eliminar(self, producto_id: int) -> bool:
@@ -107,7 +105,7 @@ class ProductoRepository:
         if not producto:
             return False
         self.db.delete(producto)
-        self.db.commit()
+        self.db.flush()
         return True
 
 
