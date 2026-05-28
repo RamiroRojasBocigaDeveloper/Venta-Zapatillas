@@ -4,7 +4,12 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from app.config import settings
 
 
-engine = create_engine(settings.database_url, echo=settings.debug)
+engine = create_engine(
+    settings.database_url, 
+    echo=settings.debug,
+    pool_pre_ping=True,
+    pool_recycle=3600
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
