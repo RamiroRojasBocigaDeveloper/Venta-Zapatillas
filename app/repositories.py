@@ -137,7 +137,7 @@ class VentaRepository:
             vendedor=vendedor,
         )
         self.db.add(venta)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(venta)
         return venta
 

@@ -168,6 +168,11 @@ def eliminar_venta(db: Session, venta_id: int, usuario: str = ""):
     for d in venta.detalles:
         detalles_lista.append(f"{d.cantidad}x {d.producto.nombre} ({d.producto.marca})")
     
+    total_pagado = sum(p.monto for p in venta.pagos if p.fecha_pago is not None)
+    notas_motivo = "Eliminación con restauración de stock"
+    if total_pagado > 0:
+        notas_motivo += f". ALERTA: La venta tenía {total_pagado} cobrados que deben ser reembolsados/ajustados."
+    
     audit = VentaEliminada(
         venta_id_original=venta.id,
         cliente_nombre=venta.cliente.nombre,
@@ -176,7 +181,7 @@ def eliminar_venta(db: Session, venta_id: int, usuario: str = ""):
         fecha_venta=venta.fecha,
         fecha_eliminacion=datetime.now(),
         usuario_que_elimino=usuario,
-        motivo="Eliminación administrativa con restauración de stock",
+        motivo=notas_motivo,
         detalles_json=json.dumps(detalles_lista)
     )
     db.add(audit)
