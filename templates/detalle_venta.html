@@ -111,31 +111,12 @@
                                 <td class="text-end pe-4">
                                     {% if not p.fecha_pago %}
                                     <div class="btn-group">
-                                        <form method="POST" action="/pago/{{ p.id }}/pagar">
+                                        <form method="POST" action="/pagar/{{ p.id }}">
                                             <button class="btn btn-sm btn-success rounded-pill px-3 me-2">Pagar</button>
                                         </form>
                                         <button class="btn btn-sm btn-light rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#reprogramarModal{{ p.id }}">
                                             Mover
                                         </button>
-                                    </div>
-
-                                    <!-- Reprogram Modal -->
-                                    <div class="modal fade" id="reprogramarModal{{ p.id }}" tabindex="-1">
-                                        <div class="modal-dialog modal-lg modal-dialog-centered">
-                                            <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.25rem;">
-                                                <div class="modal-body text-start">
-                                                    <h5 class="fw-bold mb-4">Reprogramar Pago</h5>
-                                                    <form method="POST" action="/pago/{{ p.id }}/reprogramar">
-                                                        <label class="form-label small fw-bold text-muted text-uppercase">Nueva Fecha de Vencimiento</label>
-                                                        <input type="date" name="fecha" class="form-control border-0 bg-light py-3 mb-4" style="border-radius: 0.75rem;" required>
-                                                        <div class="d-flex gap-2 justify-content-end">
-                                                            <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                                                            <button type="submit" class="btn btn-primary rounded-pill px-4">Actualizar</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                     {% endif %}
                                 </td>
@@ -232,4 +213,27 @@
     </div>
 </div>
 {% endif %}
+
+{% for p in venta.pagos %}
+{% if not p.fecha_pago %}
+<!-- Reprogram Modal -->
+<div class="modal fade" id="reprogramarModal{{ p.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-3" style="border-radius: 1.25rem;">
+            <div class="modal-body text-start">
+                <h5 class="fw-bold mb-4">Reprogramar Pago</h5>
+                <form method="POST" action="/reprogramar/{{ p.id }}">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Nueva Fecha de Vencimiento</label>
+                    <input type="date" name="nueva_fecha" class="form-control border-0 bg-light py-3 mb-4" style="border-radius: 0.75rem;" required>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">Actualizar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
 {% endblock %}
