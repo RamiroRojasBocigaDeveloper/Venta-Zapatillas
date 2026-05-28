@@ -30,9 +30,47 @@ def crear_o_actualizar_admin(db: Session):
     print("DEBUG: Sincronización de admin completada.")
 
 
+def run_migrations():
+    """Aplica migraciones estructurales de forma segura en cada arranque."""
+    db_url = str(engine.url)
+    is_mysql = db_url.startswith("mysql")
+
+    migrations = [
+        # tabla, columna, definición SQL
+        ("movimientos_stock", "stock_comprometido_anterior", "INTEGER NOT NULL DEFAULT 0"),
+        ("movimientos_stock", "stock_comprometido_nuevo",    "INTEGER NOT NULL DEFAULT 0"),
+        ("pagos",             "cobrado_por",                 "VARCHAR(100) NOT NULL DEFAULT ''"),
+        ("ventas_eliminadas", "total_pagado_reembolsado",    "DECIMAL(14,2) NOT NULL DEFAULT 0"),
+    ]
+
+    with engine.connect() as conn:
+        for tabla, columna, definicion in migrations:
+            try:
+                if is_mysql:
+                    # MySQL soporta IF NOT EXISTS en ALTER TABLE
+                    conn.execute(
+                        __import__("sqlalchemy").text(
+                            f"ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS {columna} {definicion}"
+                        )
+                    )
+                else:
+                    # SQLite no soporta IF NOT EXISTS → lo intentamos y si falla es porque ya existe
+                    conn.execute(
+                        __import__("sqlalchemy").text(
+                            f"ALTER TABLE {tabla} ADD COLUMN {columna} {definicion}"
+                        )
+                    )
+                conn.commit()
+                print(f"MIGRATION OK: {tabla}.{columna}")
+            except Exception as e:
+                # La columna ya existe → ignorar
+                print(f"MIGRATION SKIP: {tabla}.{columna} ({e.__class__.__name__})")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    run_migrations()
     db = SessionLocal()
     try:
         crear_o_actualizar_admin(db)
