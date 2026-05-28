@@ -71,6 +71,10 @@ async def registrar_venta(request: Request, db: Session = Depends(get_db)):
         frecuencia = form.get("frecuencia", "mensual")
         notas = form.get("notas")
 
+        cliente = ClienteRepository(db).obtener(cliente_id)
+        if not cliente:
+            raise ValueError("El cliente seleccionado no es válido")
+
         if abono < 0:
             raise ValueError("El abono no puede ser negativo")
         if abono >= total or num_cuotas <= 0:
@@ -92,8 +96,12 @@ async def registrar_venta(request: Request, db: Session = Depends(get_db)):
                         "entregado": entregado,
                     })
 
+        if not productos_raw:
+            raise ValueError("Al menos un producto debe ser asignado a la venta")
+
         vendedor = request.session.get("username", "")
-        crear_venta(db, cliente_id, fecha, total, num_cuotas, frecuencia, notas, abono, productos_raw, vendedor)
+        venta = crear_venta(db, cliente_id, fecha, total, num_cuotas, frecuencia, notas, abono, productos_raw, vendedor)
+        return RedirectResponse(url=f"/ventas/{venta.id}", status_code=303)
     except ValueError as e:
         return RedirectResponse(
             url=f"/ventas?error_venta={quote(str(e))}",
@@ -104,7 +112,6 @@ async def registrar_venta(request: Request, db: Session = Depends(get_db)):
             url="/ventas?error_venta=Error+al+registrar+la+venta.+Verifica+los+datos+e+intenta+de+nuevo.",
             status_code=303,
         )
-    return RedirectResponse(url="/reporte/deudores", status_code=303)
 
 
 @router.get("/ventas/{venta_id}")

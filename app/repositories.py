@@ -126,7 +126,8 @@ class VentaRepository:
         return self.db.execute(stmt.order_by(Venta.id.desc())).scalars().all()
 
     def obtener(self, venta_id: int) -> Optional[Venta]:
-        return self.db.get(Venta, venta_id)
+        stmt = select(Venta).options(selectinload(Venta.pagos), selectinload(Venta.detalles)).where(Venta.id == venta_id)
+        return self.db.execute(stmt).scalar_one_or_none()
 
     def crear(self, cliente_id: int, fecha: date, total: Decimal,
               num_cuotas: int, frecuencia: str, notas: Optional[str],
@@ -290,15 +291,15 @@ class ReporteRepository:
         ).scalar()
 
     def contar_ventas(self) -> int:
-        return self.db.query(Venta).count()
+        return self.db.execute(select(sa_func.count(Venta.id))).scalar()
 
     def contar_ventas_pendientes_entrega(self) -> int:
-        from sqlalchemy import func
-        return self.db.query(VentaDetalle.venta_id).filter(VentaDetalle.entregado == False).distinct().count()
+        return self.db.execute(select(sa_func.count(sa_func.distinct(VentaDetalle.venta_id))).where(VentaDetalle.entregado == False)).scalar()
 
     def ultimas_ventas(self, limit: int = 5) -> list[Venta]:
-        return self.db.query(Venta).order_by(Venta.id.desc()).limit(limit).all()
+        stmt = select(Venta).options(selectinload(Venta.cliente)).order_by(Venta.id.desc()).limit(limit)
+        return self.db.execute(stmt).scalars().all()
 
     def listar_ventas_eliminadas(self) -> list[VentaEliminada]:
         from app.models import VentaEliminada
-        return self.db.query(VentaEliminada).order_by(VentaEliminada.fecha_eliminacion.desc()).all()
+        return self.db.execute(select(VentaEliminada).order_by(VentaEliminada.fecha_eliminacion.desc())).scalars().all()
