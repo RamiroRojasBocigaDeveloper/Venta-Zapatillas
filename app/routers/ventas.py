@@ -121,6 +121,8 @@ def detalle_venta(venta_id: int, request: Request, db: Session = Depends(get_db)
     venta = repo.obtener(venta_id)
     if not venta:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
+    
+    error = request.query_params.get("error")
     total_pagado = sum(
         (p.monto for p in venta.pagos if p.fecha_pago is not None),
         Decimal("0")
@@ -129,6 +131,7 @@ def detalle_venta(venta_id: int, request: Request, db: Session = Depends(get_db)
         "venta": venta,
         "total_pagado": total_pagado,
         "hoy": date.today(),
+        "error": error,
         "username": request.session.get("username"),
         "rol": request.session.get("rol"),
     })
@@ -187,10 +190,15 @@ def reprogramar(
 
 @router.post("/ventas/detalle/{detalle_id}/entregar")
 def entregar_producto(detalle_id: int, db: Session = Depends(get_db)):
-    detalle = marcar_entregado(db, detalle_id)
-    if not detalle:
-        raise HTTPException(status_code=404, detail="Detalle no encontrado o ya entregado")
-    return RedirectResponse(url=f"/ventas/{detalle.venta_id}", status_code=303)
+    from app.models import VentaDetalle
+    try:
+        detalle = marcar_entregado(db, detalle_id)
+        if not detalle:
+            raise HTTPException(status_code=404, detail="Detalle no encontrado o ya entregado")
+        return RedirectResponse(url=f"/ventas/{detalle.venta_id}", status_code=303)
+    except ValueError as e:
+        detalle = db.get(VentaDetalle, detalle_id)
+        return RedirectResponse(url=f"/ventas/{detalle.venta_id}?error={quote(str(e))}", status_code=303)
 
 
 @router.post("/ventas/{venta_id}/eliminar")

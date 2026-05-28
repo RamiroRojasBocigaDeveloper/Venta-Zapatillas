@@ -43,7 +43,8 @@
                         <th>Ref.</th>
                         <th>Precio Venta</th>
                         <th>Costo</th>
-                        <th>Stock</th>
+                        <th>Stock Físico</th>
+                        <th>Comprometido</th>
                         <th class="text-end pe-4">Acciones</th>
                     </tr>
                 </thead>
@@ -71,6 +72,15 @@
                                     <i class="bi bi-plus-slash-minus text-primary"></i>
                                 </button>
                             </div>
+                        </td>
+                        <td>
+                            {% set por_conseguir = p.stock_comprometido - p.stock %}
+                            <span class="badge {% if p.stock_comprometido > 0 %}bg-warning text-dark{% else %}bg-light text-secondary{% endif %} fs-6">
+                                {{ p.stock_comprometido }} uds.
+                            </span>
+                            {% if por_conseguir > 0 %}
+                            <div class="mt-1 small fw-bold text-danger"><i class="bi bi-cart-x"></i> Comprar: {{ por_conseguir }}</div>
+                            {% endif %}
                         </td>
                         <td class="text-end pe-4">
                             <button class="btn btn-light btn-sm rounded-pill text-primary fw-bold px-3"

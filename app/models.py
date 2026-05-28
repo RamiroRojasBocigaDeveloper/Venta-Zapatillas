@@ -29,6 +29,7 @@ class Producto(Base):
     precio_compra: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=0)
     precio: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    stock_comprometido: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     detalles_venta: Mapped[list["VentaDetalle"]] = relationship("VentaDetalle", back_populates="producto")
 

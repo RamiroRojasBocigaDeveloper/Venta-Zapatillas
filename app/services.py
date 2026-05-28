@@ -59,7 +59,13 @@ def crear_venta(db: Session, cliente_id: int, fecha: date, total: Decimal,
         for item in productos:
             producto = db.get(Producto, item["producto_id"])
             stock_anterior = producto.stock
-            producto.stock -= item["cantidad"]
+            entregado = item.get("entregado", False)
+            if entregado:
+                if producto.stock < item["cantidad"]:
+                    raise ValueError(f"Stock físico insuficiente para entregar {producto.nombre} inmediatamente.")
+                producto.stock -= item["cantidad"]
+            else:
+                producto.stock_comprometido += item["cantidad"]
 
             detalle = VentaDetalle(
                 venta_id=venta.id,
@@ -67,20 +73,22 @@ def crear_venta(db: Session, cliente_id: int, fecha: date, total: Decimal,
                 cantidad=item["cantidad"],
                 precio_unitario=item["precio_unitario"],
                 precio_compra=producto.precio_compra,
-                entregado=item.get("entregado", False),
+                entregado=entregado,
             )
             db.add(detalle)
-            db.add(MovimientoStock(
-                producto_id=producto.id,
-                cantidad=-item["cantidad"],
-                stock_anterior=stock_anterior,
-                stock_nuevo=producto.stock,
-                tipo="venta",
-                motivo=f"Venta #{venta.id}",
-                usuario=vendedor,
-                venta_id=venta.id,
-                fecha_hora=datetime.now(),
-            ))
+            
+            if entregado:
+                db.add(MovimientoStock(
+                    producto_id=producto.id,
+                    cantidad=-item["cantidad"],
+                    stock_anterior=stock_anterior,
+                    stock_nuevo=producto.stock,
+                    tipo="venta",
+                    motivo=f"Entrega INMEDIATA Venta #{venta.id}",
+                    usuario=vendedor,
+                    venta_id=venta.id,
+                    fecha_hora=datetime.now(),
+                ))
         db.flush()
 
     if abono > 0:
@@ -118,6 +126,25 @@ def marcar_entregado(db: Session, detalle_id: int, usuario: str = ""):
     detalle = db.get(VentaDetalle, detalle_id)
     if not detalle or detalle.entregado:
         return None
+        
+    producto = detalle.producto
+    if producto.stock < detalle.cantidad:
+        raise ValueError(f"Stock físico insuficiente ({producto.stock}) para cubrir entrega de {detalle.cantidad} uds.")
+
+    producto.stock -= detalle.cantidad
+    producto.stock_comprometido -= detalle.cantidad
+
+    db.add(MovimientoStock(
+        producto_id=producto.id,
+        cantidad=-detalle.cantidad,
+        stock_anterior=producto.stock + detalle.cantidad,
+        stock_nuevo=producto.stock,
+        tipo="venta",
+        motivo=f"Entrega de Venta #{detalle.venta_id}",
+        usuario=usuario,
+        fecha_hora=datetime.now(),
+    ))
+
     detalle.entregado = True
     db.commit()
     db.refresh(detalle)
@@ -188,20 +215,22 @@ def eliminar_venta(db: Session, venta_id: int, usuario: str = ""):
     for detalle in venta.detalles:
         producto = detalle.producto
         stock_anterior = producto.stock
-        producto.stock += detalle.cantidad
 
-        # Registrar el movimiento de stock como un ajuste por eliminación de venta
-        db.add(MovimientoStock(
-            producto_id=producto.id,
-            cantidad=detalle.cantidad,
-            stock_anterior=stock_anterior,
-            stock_nuevo=producto.stock,
-            tipo="ajuste",
-            motivo=f"Eliminación Venta #{venta.id}",
-            usuario=usuario,
-            venta_id=None,  # La venta dejará de existir
-            fecha_hora=datetime.now(),
-        ))
+        if detalle.entregado:
+            producto.stock += detalle.cantidad
+            db.add(MovimientoStock(
+                producto_id=producto.id,
+                cantidad=detalle.cantidad,
+                stock_anterior=stock_anterior,
+                stock_nuevo=producto.stock,
+                tipo="ajuste",
+                motivo=f"Eliminación Venta #{venta.id} (Devolución Física)",
+                usuario=usuario,
+                venta_id=None,
+                fecha_hora=datetime.now(),
+            ))
+        else:
+            producto.stock_comprometido -= detalle.cantidad
 
     # 3. Eliminar la venta físicamente (la cascada borrará detalles y pagos)
     db.delete(venta)
