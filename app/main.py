@@ -52,7 +52,7 @@ app.add_middleware(CSRFProtectionMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.get_secret_key(),
-    max_age=28800,
+    max_age=None,
     https_only=settings.https_only,
     same_site="strict",
 )
