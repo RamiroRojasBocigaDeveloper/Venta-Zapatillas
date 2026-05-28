@@ -19,13 +19,14 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[])
 def crear_o_actualizar_admin(db: Session):
     repo = UsuarioRepository(db)
     admin = repo.obtener_por_username(settings.admin_username)
+    hash_pw = bcrypt.hashpw(settings.admin_password.encode(), bcrypt.gensalt()).decode()
+    
     if admin:
-        # Si el admin existe, solo nos aseguramos de que sea admin
-        # pero NO sobreescribimos su contraseña para no bloquear al usuario
+        # Sincronizamos rol y contraseña con las variables de entorno
         admin.rol = "admin"
+        admin.password_hash = hash_pw
     else:
-        # Solo si es nuevo lo creamos con la clave por defecto
-        hash_pw = bcrypt.hashpw(settings.admin_password.encode(), bcrypt.gensalt()).decode()
+        # Creamos el usuario si no existe
         repo.crear(settings.admin_username, hash_pw, "admin")
     db.commit()
 
