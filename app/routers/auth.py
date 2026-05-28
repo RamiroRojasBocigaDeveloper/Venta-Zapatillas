@@ -1,4 +1,6 @@
 import bcrypt
+import time
+from typing import Optional
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -14,8 +16,8 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/login")
-def login_form(request: Request):
-    return templates.TemplateResponse(request, "login.html")
+def login_form(request: Request, error: Optional[str] = None):
+    return templates.TemplateResponse(request, "login.html", {"error": error})
 
 
 @router.post("/login")
@@ -27,6 +29,7 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
         return templates.TemplateResponse(request, "login.html", {"error": "Usuario o contraseña incorrectos"})
     request.session["username"] = username
     request.session["rol"] = usuario.rol
+    request.session["last_activity"] = time.time()
     return RedirectResponse(url="/", status_code=303)
 
 
