@@ -301,5 +301,4 @@ class ReporteRepository:
         return self.db.execute(stmt).scalars().all()
 
     def listar_ventas_eliminadas(self) -> list[VentaEliminada]:
-        from app.models import VentaEliminada
         return self.db.execute(select(VentaEliminada).order_by(VentaEliminada.fecha_eliminacion.desc())).scalars().all()

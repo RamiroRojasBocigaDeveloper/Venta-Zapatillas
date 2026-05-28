@@ -10,8 +10,9 @@ from app.repositories import ClienteRepository, ProductoRepository, VentaReposit
 from app.schemas import ReprogramarCuota
 from app.models import Venta, VentaDetalle
 from app.services import (
-    crear_venta, pagar_cuota, reprogramar_cuota, cerrar_venta, marcar_entregado, eliminar_venta
+    crear_venta, reprogramar_cuota, cerrar_venta, marcar_entregado, eliminar_venta
 )
+from starlette.concurrency import run_in_threadpool
 from app.templating import templates
 
 router = APIRouter()
@@ -100,7 +101,7 @@ async def registrar_venta(request: Request, db: Session = Depends(get_db)):
             raise ValueError("Al menos un producto debe ser asignado a la venta")
 
         vendedor = request.session.get("username", "")
-        venta = crear_venta(db, cliente_id, fecha, total, num_cuotas, frecuencia, notas, abono, productos_raw, vendedor)
+        venta = await run_in_threadpool(crear_venta, db, cliente_id, fecha, total, num_cuotas, frecuencia, notas, abono, productos_raw, vendedor)
         return RedirectResponse(url=f"/ventas/{venta.id}", status_code=303)
     except ValueError as e:
         return RedirectResponse(
@@ -143,7 +144,7 @@ def cerrar(venta_id: int, request: Request, db: Session = Depends(get_db)):
 
 @router.post("/pagar/{pago_id}")
 def pagar(pago_id: int, db: Session = Depends(get_db)):
-    pago = pagar_cuota(db, pago_id, date.today())
+    pago = PagoRepository(db).pagar(pago_id, date.today())
     if not pago:
         raise HTTPException(status_code=404, detail="Pago no encontrado o ya pagado")
     return RedirectResponse(url=f"/ventas/{pago.venta_id}", status_code=303)

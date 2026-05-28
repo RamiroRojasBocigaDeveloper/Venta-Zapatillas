@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
@@ -14,6 +15,8 @@ from app.models import Producto, VentaDetalle, MovimientoStock, VentaEliminada
 
 
 def generar_cuotas(total: Decimal, num_cuotas: int, fecha_inicio: date, frecuencia: str):
+    if frecuencia not in ("quincenal", "mensual"):
+        raise ValueError("Frecuencia no válida. Debe ser 'quincenal' o 'mensual'.")
     cuota_base = (total / Decimal(num_cuotas)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
     delta_dias = 15 if frecuencia == "quincenal" else 30
     cuotas = []
@@ -121,10 +124,6 @@ def marcar_entregado(db: Session, detalle_id: int, usuario: str = ""):
     return detalle
 
 
-def pagar_cuota(db: Session, pago_id: int, fecha_pago: date):
-    pago_repo = PagoRepository(db)
-    return pago_repo.pagar(pago_id, fecha_pago)
-
 
 def reprogramar_cuota(db: Session, pago_id: int, nueva_fecha: date):
     pago_repo = PagoRepository(db)
@@ -157,7 +156,6 @@ def obtener_deudores(db: Session):
 
 def eliminar_venta(db: Session, venta_id: int, usuario: str = ""):
     """Elimina una venta, restaura el stock de los productos y registra los movimientos con auditoría."""
-    import json
     venta_repo = VentaRepository(db)
     venta = venta_repo.obtener(venta_id)
     if not venta:

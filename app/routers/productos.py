@@ -6,7 +6,8 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.repositories import ProductoRepository
+from sqlalchemy import select
+from app.repositories import ProductoRepository, UsuarioRepository
 from app.models import Producto, MovimientoStock
 from app.templating import templates
 
@@ -17,8 +18,7 @@ router = APIRouter()
 def listar_productos(request: Request, db: Session = Depends(get_db), q: str = ""):
     repo = ProductoRepository(db)
     productos = repo.listar(q)
-    movimientos = db.query(MovimientoStock).order_by(MovimientoStock.fecha_hora.desc()).limit(100).all()
-    from app.repositories import UsuarioRepository
+    movimientos = db.execute(select(MovimientoStock).order_by(MovimientoStock.fecha_hora.desc()).limit(100)).scalars().all()
     usuarios = UsuarioRepository(db).listar()
     modal_error = request.query_params.get("error_producto")
     modal_success = request.query_params.get("success_producto")
@@ -119,22 +119,20 @@ def ajustar_stock(
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
 
-    if cantidad <= 0:
-        return RedirectResponse(
-            url=f"/productos?error_producto={quote('La cantidad debe ser mayor a cero')}",
-            status_code=303,
-        )
-
-    stock_anterior = producto.stock
-    if tipo == "compra":
-        producto.stock += cantidad
-    elif tipo == "ajuste":
-        producto.stock += cantidad
-    else:
+    if tipo not in ("compra", "ajuste"):
         return RedirectResponse(
             url=f"/productos?error_producto={quote('Tipo de movimiento inválido')}",
             status_code=303,
         )
+
+    if cantidad == 0 or (tipo == "compra" and cantidad < 0):
+        return RedirectResponse(
+            url=f"/productos?error_producto={quote('Cantidad inválida para el tipo de movimiento')}",
+            status_code=303,
+        )
+
+    stock_anterior = producto.stock
+    producto.stock += cantidad
 
     db.add(MovimientoStock(
         producto_id=producto.id,
